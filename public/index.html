@@ -4,56 +4,170 @@
   <meta charset="UTF-8">
   <title>Trusted Repaire</title>
   <style>
-    body { font-family: Arial; padding: 20px; background: #f0f0f0; }
-    .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
-    h1 { color: #333; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial; background: #f0f0f0; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; min-height: 100vh; }
+    h1 { color: #333; margin-bottom: 20px; }
     .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
     .stat { background: #667eea; color: white; padding: 20px; border-radius: 8px; text-align: center; }
     .stat .value { font-size: 24px; font-weight: bold; }
     input, select, button { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 5px; }
     button { background: #667eea; color: white; cursor: pointer; }
+    button:hover { background: #764ba2; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     table th, table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
     table th { background: #f0f0f0; }
+    
+    .login-page { display: none; text-align: center; padding: 40px; }
+    .login-page.active { display: block; }
+    .login-form { max-width: 400px; margin: 0 auto; background: #f8f9fa; padding: 30px; border-radius: 10px; }
+    .login-form h2 { margin-bottom: 20px; }
+    .login-form input { width: 100%; margin: 10px 0; padding: 12px; }
+    .login-form button { width: 100%; }
+    .login-form .toggle { margin-top: 15px; cursor: pointer; color: #667eea; }
+    
+    .dashboard { display: none; }
+    .dashboard.active { display: block; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .logout-btn { background: #dc3545; padding: 10px 20px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🔧 Trusted Repaire</h1>
-    <div class="stats">
-      <div class="stat"><div>Total</div><div class="value" id="total">0</div></div>
-      <div class="stat"><div>En attente</div><div class="value" id="pending">0</div></div>
-      <div class="stat"><div>Réparées</div><div class="value" id="completed">0</div></div>
-      <div class="stat"><div>Revenu</div><div class="value" id="revenue">0€</div></div>
+  <!-- LOGIN PAGE -->
+  <div class="login-page active">
+    <div class="login-form">
+      <h2 id="loginTitle">Se connecter</h2>
+      <input type="email" id="loginEmail" placeholder="Email">
+      <input type="password" id="loginPassword" placeholder="Mot de passe">
+      <button onclick="handleAuth()">Se connecter</button>
+      <div class="toggle" onclick="toggleAuthMode()">
+        Créer un compte →
+      </div>
     </div>
-    <h2>Ajouter une réparation</h2>
-    <div>
-      <input type="text" id="customer" placeholder="Client">
-      <input type="text" id="device" placeholder="Appareil">
-      <input type="text" id="issue" placeholder="Problème">
-      <input type="number" id="price" placeholder="Prix">
-      <button onclick="addRepair()">Ajouter</button>
-    </div>
-    <h2>Réparations</h2>
-    <table>
-      <thead>
-        <tr><th>Client</th><th>Appareil</th><th>Problème</th><th>Statut</th><th>Prix</th><th>Action</th></tr>
-      </thead>
-      <tbody id="repairs-table"></tbody>
-    </table>
   </div>
+
+  <!-- DASHBOARD -->
+  <div class="dashboard">
+    <div class="container">
+      <div class="header">
+        <h1>🔧 Trusted Repaire</h1>
+        <button class="logout-btn" onclick="logout()">Déconnexion</button>
+      </div>
+      
+      <div class="stats">
+        <div class="stat"><div>Total</div><div class="value" id="total">0</div></div>
+        <div class="stat"><div>En attente</div><div class="value" id="pending">0</div></div>
+        <div class="stat"><div>Réparées</div><div class="value" id="completed">0</div></div>
+        <div class="stat"><div>Revenu</div><div class="value" id="revenue">0€</div></div>
+      </div>
+      
+      <h2>Ajouter une réparation</h2>
+      <div>
+        <input type="text" id="customer" placeholder="Client">
+        <input type="text" id="device" placeholder="Appareil">
+        <input type="text" id="issue" placeholder="Problème">
+        <input type="number" id="price" placeholder="Prix">
+        <button onclick="addRepair()">Ajouter</button>
+      </div>
+      
+      <h2>Réparations</h2>
+      <table>
+        <thead>
+          <tr><th>Client</th><th>Appareil</th><th>Problème</th><th>Statut</th><th>Prix</th><th>Action</th></tr>
+        </thead>
+        <tbody id="repairs-table"></tbody>
+      </table>
+    </div>
+  </div>
+
   <script>
     const API = 'https://trusted-repaire.onrender.com';
-    
-    async function loadRepairs() {
+    let isLoginMode = true;
+
+    // Vérifie si connecté au chargement
+    window.onload = () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        showDashboard();
+        loadRepairs();
+      } else {
+        showLogin();
+      }
+    };
+
+    function toggleAuthMode() {
+      isLoginMode = !isLoginMode;
+      document.getElementById('loginTitle').textContent = isLoginMode ? 'Se connecter' : 'Créer un compte';
+    }
+
+    function showLogin() {
+      document.querySelector('.login-page').classList.add('active');
+      document.querySelector('.dashboard').classList.remove('active');
+    }
+
+    function showDashboard() {
+      document.querySelector('.login-page').classList.remove('active');
+      document.querySelector('.dashboard').classList.add('active');
+    }
+
+    async function handleAuth() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      if (!email || !password) {
+        alert('Remplis tous les champs!');
+        return;
+      }
+
+      const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
+
       try {
-        const res = await fetch(API + '/repairs');
+        const res = await fetch(API + endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('userId', data.userId);
+          showDashboard();
+          loadRepairs();
+          document.getElementById('loginEmail').value = '';
+          document.getElementById('loginPassword').value = '';
+        } else {
+          alert('Erreur: ' + data.error);
+        }
+      } catch (err) {
+        alert('Erreur de connexion');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      showLogin();
+      document.getElementById('loginEmail').value = '';
+      document.getElementById('loginPassword').value = '';
+    }
+
+    async function loadRepairs() {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(API + '/repairs', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
         const repairs = await res.json();
         displayRepairs(repairs);
         loadStats();
-      } catch (err) { console.error('Erreur chargement:', err); }
+      } catch (err) {
+        console.error('Erreur:', err);
+      }
     }
-    
+
     function displayRepairs(repairs) {
       const table = document.getElementById('repairs-table');
       table.innerHTML = repairs.map(r => `
@@ -73,10 +187,13 @@
         </tr>
       `).join('');
     }
-    
+
     async function loadStats() {
+      const token = localStorage.getItem('token');
       try {
-        const res = await fetch(API + '/stats/summary');
+        const res = await fetch(API + '/stats/summary', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
         const stats = await res.json();
         document.getElementById('total').textContent = stats.total;
         document.getElementById('pending').textContent = stats.pending;
@@ -84,22 +201,26 @@
         document.getElementById('revenue').textContent = stats.revenue + '€';
       } catch (err) {}
     }
-    
+
     async function addRepair() {
+      const token = localStorage.getItem('token');
       const customer = document.getElementById('customer').value;
       const device = document.getElementById('device').value;
       const issue = document.getElementById('issue').value;
       const price = parseInt(document.getElementById('price').value);
-      
+
       if (!customer || !device || !issue || !price) {
-        alert('Remplisse tous les champs!');
+        alert('Remplis tous les champs!');
         return;
       }
-      
+
       try {
         await fetch(API + '/repairs', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
           body: JSON.stringify({ customer, device, issue, price })
         });
         document.getElementById('customer').value = '';
@@ -107,30 +228,36 @@
         document.getElementById('issue').value = '';
         document.getElementById('price').value = '';
         loadRepairs();
-      } catch (err) { console.error('Erreur ajout:', err); }
+      } catch (err) {}
     }
-    
+
     async function updateStatus(id, status) {
+      const token = localStorage.getItem('token');
       try {
         await fetch(API + '/repairs/' + id, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
           body: JSON.stringify({ status })
         });
         loadRepairs();
-      } catch (err) { console.error('Erreur modification:', err); }
+      } catch (err) {}
     }
-    
+
     async function deleteRepair(id) {
       if (confirm('Supprimer?')) {
+        const token = localStorage.getItem('token');
         try {
-          await fetch(API + '/repairs/' + id, { method: 'DELETE' });
+          await fetch(API + '/repairs/' + id, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
           loadRepairs();
-        } catch (err) { console.error('Erreur suppression:', err); }
+        } catch (err) {}
       }
     }
-    
-    loadRepairs();
   </script>
 </body>
 </html>
