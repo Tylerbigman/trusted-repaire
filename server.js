@@ -1,70 +1,102 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 app.use(express.static('public'));
 
-let repairs = [
-  { id: 1, customer: 'Jean', device: 'iPhone 14', issue: 'Écran cassé', status: 'En attente', price: 200 },
-  { id: 2, customer: 'Marie', device: 'MacBook Pro', issue: 'Batterie faible', status: 'En réparation', price: 150 }
-];
+require('dotenv').config();
 
-let nextId = 3;
+// Connecte à MongoDB
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('MongoDB connecté!'))
+  .catch(err => console.error('Erreur MongoDB:', err));
 
-app.get('/repairs', (req, res) => {
-  res.json(repairs);
+// Schéma de réparation
+const repairSchema = new mongoose.Schema({
+  customer: String,
+  device: String,
+  issue: String,
+  status: { type: String, default: 'En attente' },
+  price: Number,
+  createdAt: { type: Date, default: Date.now }
 });
 
-app.get('/repairs/:id', (req, res) => {
-  const repair = repairs.find(r => r.id === parseInt(req.params.id));
-  if (!repair) return res.status(404).json({ error: 'Réparation non trouvée' });
-  res.json(repair);
-});
+const Repair = mongoose.model('Repair', repairSchema);
 
-app.post('/repairs', (req, res) => {
-  const { customer, device, issue, price } = req.body;
-  if (!customer || !device || !issue || !price) {
-    return res.status(400).json({ error: 'Tous les champs sont requis' });
+// GET toutes les réparations
+app.get('/repairs', async (req, res) => {
+  try {
+    const repairs = await Repair.find();
+    res.json(repairs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  const newRepair = {
-    id: nextId++,
-    customer,
-    device,
-    issue,
-    status: 'En attente',
-    price
-  };
-  repairs.push(newRepair);
-  res.status(201).json(newRepair);
 });
 
-app.put('/repairs/:id', (req, res) => {
-  const repair = repairs.find(r => r.id === parseInt(req.params.id));
-  if (!repair) return res.status(404).json({ error: 'Réparation non trouvée' });
-  if (req.body.customer) repair.customer = req.body.customer;
-  if (req.body.device) repair.device = req.body.device;
-  if (req.body.issue) repair.issue = req.body.issue;
-  if (req.body.status) repair.status = req.body.status;
-  if (req.body.price) repair.price = req.body.price;
-  res.json(repair);
+// GET une réparation
+app.get('/repairs/:id', async (req, res) => {
+  try {
+    const repair = await Repair.findById(req.params.id);
+    if (!repair) return res.status(404).json({ error: 'Non trouvée' });
+    res.json(repair);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.delete('/repairs/:id', (req, res) => {
-  const index = repairs.findIndex(r => r.id === parseInt(req.params.id));
-  if (index === -1) return res.status(404).json({ error: 'Réparation non trouvée' });
-  const deleted = repairs.splice(index, 1);
-  res.json({ message: 'Supprimé', repair: deleted[0] });
+// POST créer
+app.post('/repairs', async (req, res) => {
+  try {
+    const { customer, device, issue, price } = req.body;
+    if (!customer || !device || !issue || !price) {
+      return res.status(400).json({ error: 'Champs requis' });
+    }
+    const repair = new Repair({ customer, device, issue, price });
+    await repair.save();
+    res.status(201).json(repair);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get('/stats/summary', (req, res) => {
-  const total = repairs.length;
-  const pending = repairs.filter(r => r.status === 'En attente').length;
-  const completed = repairs.filter(r => r.status === 'Réparation terminée').length;
-  const revenue = repairs.reduce((sum, r) => sum + r.price, 0);
-  res.json({ total, pending, completed, revenue });
+// PUT modifier
+app.put('/repairs/:id', async (req, res) => {
+  try {
+    const repair = await Repair.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!repair) return res.status(404).json({ error: 'Non trouvée' });
+    res.json(repair);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE supprimer
+app.delete('/repairs/:id', async (req, res) => {
+  try {
+    const repair = await Repair.findByIdAndDelete(req.params.id);
+    if (!repair) return res.status(404).json({ error: 'Non trouvée' });
+    res.json({ message: 'Supprimée', repair });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET stats
+app.get('/stats/summary', async (req, res) => {
+  try {
+    const total = await Repair.countDocuments();
+    const pending = await Repair.countDocuments({ status: 'En attente' });
+    const completed = await Repair.countDocuments({ status: 'Réparation terminée' });
+    const repairs = await Repair.find();
+    const revenue = repairs.reduce((sum, r) => sum + r.price, 0);
+    res.json({ total, pending, completed, revenue });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, () => {
-  console.log('Trusted Repaire API running on http://localhost:' + PORT);
+  console.log('Trusted Repaire API running on port ' + PORT);
 });

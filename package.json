@@ -1,1 +1,1 @@
-{"name":"trusted-repaire","version":"1.0.0","scripts":{"start":"node server.js"},"dependencies":{"express":"^4.18.0"}}
+{"name":"trusted-repaire","version":"1.0.0","scripts":{"start":"node server.js"},"dependencies":{"express":"^4.18.0","mongoose":"^9.7.1"}}
