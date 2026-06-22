@@ -20,26 +20,12 @@
 <body>
   <div class="container">
     <h1>🔧 Trusted Repaire</h1>
-    
     <div class="stats">
-      <div class="stat">
-        <div>Total</div>
-        <div class="value" id="total">0</div>
-      </div>
-      <div class="stat">
-        <div>En attente</div>
-        <div class="value" id="pending">0</div>
-      </div>
-      <div class="stat">
-        <div>Réparées</div>
-        <div class="value" id="completed">0</div>
-      </div>
-      <div class="stat">
-        <div>Revenu</div>
-        <div class="value" id="revenue">0€</div>
-      </div>
+      <div class="stat"><div>Total</div><div class="value" id="total">0</div></div>
+      <div class="stat"><div>En attente</div><div class="value" id="pending">0</div></div>
+      <div class="stat"><div>Réparées</div><div class="value" id="completed">0</div></div>
+      <div class="stat"><div>Revenu</div><div class="value" id="revenue">0€</div></div>
     </div>
-
     <h2>Ajouter une réparation</h2>
     <div>
       <input type="text" id="customer" placeholder="Client">
@@ -48,37 +34,26 @@
       <input type="number" id="price" placeholder="Prix">
       <button onclick="addRepair()">Ajouter</button>
     </div>
-
     <h2>Réparations</h2>
     <table>
       <thead>
-        <tr>
-          <th>Client</th>
-          <th>Appareil</th>
-          <th>Problème</th>
-          <th>Statut</th>
-          <th>Prix</th>
-          <th>Action</th>
-        </tr>
+        <tr><th>Client</th><th>Appareil</th><th>Problème</th><th>Statut</th><th>Prix</th><th>Action</th></tr>
       </thead>
       <tbody id="repairs-table"></tbody>
     </table>
   </div>
-
   <script>
     const API = 'https://trusted-repaire.onrender.com';
-
+    
     async function loadRepairs() {
       try {
         const res = await fetch(API + '/repairs');
         const repairs = await res.json();
         displayRepairs(repairs);
         loadStats();
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error('Erreur chargement:', err); }
     }
-
+    
     function displayRepairs(repairs) {
       const table = document.getElementById('repairs-table');
       table.innerHTML = repairs.map(r => `
@@ -87,18 +62,18 @@
           <td>${r.device}</td>
           <td>${r.issue}</td>
           <td>
-            <select onchange="updateStatus(${r.id}, this.value)">
+            <select onchange="updateStatus('${r._id}', this.value)">
               <option value="En attente" ${r.status === 'En attente' ? 'selected' : ''}>En attente</option>
               <option value="En réparation" ${r.status === 'En réparation' ? 'selected' : ''}>En réparation</option>
               <option value="Réparation terminée" ${r.status === 'Réparation terminée' ? 'selected' : ''}>Terminée</option>
             </select>
           </td>
           <td>${r.price}€</td>
-          <td><button onclick="<td><button onclick="deleteRepair('${r._id}')">Supprimer</button></td>
+          <td><button onclick="deleteRepair('${r._id}')">Supprimer</button></td>
         </tr>
       `).join('');
     }
-
+    
     async function loadStats() {
       try {
         const res = await fetch(API + '/stats/summary');
@@ -109,18 +84,18 @@
         document.getElementById('revenue').textContent = stats.revenue + '€';
       } catch (err) {}
     }
-
+    
     async function addRepair() {
       const customer = document.getElementById('customer').value;
       const device = document.getElementById('device').value;
       const issue = document.getElementById('issue').value;
       const price = parseInt(document.getElementById('price').value);
-
+      
       if (!customer || !device || !issue || !price) {
         alert('Remplisse tous les champs!');
         return;
       }
-
+      
       try {
         await fetch(API + '/repairs', {
           method: 'POST',
@@ -132,9 +107,9 @@
         document.getElementById('issue').value = '';
         document.getElementById('price').value = '';
         loadRepairs();
-      } catch (err) {}
+      } catch (err) { console.error('Erreur ajout:', err); }
     }
-
+    
     async function updateStatus(id, status) {
       try {
         await fetch(API + '/repairs/' + id, {
@@ -143,20 +118,19 @@
           body: JSON.stringify({ status })
         });
         loadRepairs();
-      } catch (err) {}
+      } catch (err) { console.error('Erreur modification:', err); }
     }
-
+    
     async function deleteRepair(id) {
       if (confirm('Supprimer?')) {
         try {
           await fetch(API + '/repairs/' + id, { method: 'DELETE' });
           loadRepairs();
-        } catch (err) {}
+        } catch (err) { console.error('Erreur suppression:', err); }
       }
     }
-
+    
     loadRepairs();
   </script>
 </body>
 </html>
-
