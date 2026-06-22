@@ -94,7 +94,7 @@
             </select>
           </td>
           <td>${r.price}€</td>
-          <td><button onclick="deleteRepair(${r.id})">Supprimer</button></td>
+          <td><button onclick="<td><button onclick="deleteRepair('${r._id}')">Supprimer</button></td>
         </tr>
       `).join('');
     }
@@ -159,3 +159,4 @@
   </script>
 </body>
 </html>
+
