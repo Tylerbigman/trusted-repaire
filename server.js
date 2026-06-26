@@ -24,8 +24,21 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static('public'));
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limitingconst limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Trop de requêtes, réessaye plus tard',
+  trustProxy: true,
+  skip: (req, res) => req.method === 'OPTIONS'
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Trop de tentatives de connexion',
+  trustProxy: true,
+  skip: (req, res) => req.method === 'OPTIONS'
+});const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // 100 requêtes max
   message: 'Trop de requêtes, réessaye plus tard'
