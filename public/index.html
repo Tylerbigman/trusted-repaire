@@ -25,6 +25,7 @@
     .login-form input { width: 100%; margin: 10px 0; padding: 12px; }
     .login-form button { width: 100%; }
     .login-form .toggle { margin-top: 15px; cursor: pointer; color: #667eea; }
+    .error { color: #dc3545; font-size: 12px; margin-top: 5px; }
     
     .dashboard { display: none; }
     .dashboard.active { display: block; }
@@ -40,6 +41,7 @@
       <h2 id="loginTitle">Se connecter</h2>
       <input type="email" id="loginEmail" placeholder="Email">
       <input type="password" id="loginPassword" placeholder="Mot de passe">
+      <div id="errorMsg" class="error"></div>
       <button onclick="handleAuth()">Se connecter</button>
       <div class="toggle" onclick="toggleAuthMode()">
         Créer un compte →
@@ -67,7 +69,7 @@
         <input type="text" id="customer" placeholder="Client">
         <input type="text" id="device" placeholder="Appareil">
         <input type="text" id="issue" placeholder="Problème">
-        <input type="number" id="price" placeholder="Prix">
+        <input type="number" id="price" placeholder="Prix" min="0">
         <button onclick="addRepair()">Ajouter</button>
       </div>
       
@@ -84,11 +86,12 @@
   <script>
     const API = 'https://trusted-repaire.onrender.com';
     let isLoginMode = true;
+    let refreshToken = null;
 
-    // Vérifie si connecté au chargement
     window.onload = () => {
       const token = localStorage.getItem('token');
       if (token) {
+        refreshToken = localStorage.getItem('refreshToken');
         showDashboard();
         loadRepairs();
       } else {
@@ -99,6 +102,7 @@
     function toggleAuthMode() {
       isLoginMode = !isLoginMode;
       document.getElementById('loginTitle').textContent = isLoginMode ? 'Se connecter' : 'Créer un compte';
+      document.getElementById('errorMsg').textContent = '';
     }
 
     function showLogin() {
@@ -114,9 +118,15 @@
     async function handleAuth() {
       const email = document.getElementById('loginEmail').value;
       const password = document.getElementById('loginPassword').value;
+      const errorDiv = document.getElementById('errorMsg');
 
       if (!email || !password) {
-        alert('Remplis tous les champs!');
+        errorDiv.textContent = 'Remplis tous les champs!';
+        return;
+      }
+
+      if (!isLoginMode && password.length < 8) {
+        errorDiv.textContent = 'Mot de passe: min 8 caractères';
         return;
       }
 
@@ -133,29 +143,55 @@
 
         if (res.ok) {
           localStorage.setItem('token', data.token);
-          localStorage.setItem('userId', data.userId);
+          localStorage.setItem('refreshToken', data.refreshToken);
+          refreshToken = data.refreshToken;
           showDashboard();
           loadRepairs();
           document.getElementById('loginEmail').value = '';
           document.getElementById('loginPassword').value = '';
+          errorDiv.textContent = '';
         } else {
-          alert('Erreur: ' + data.error);
+          errorDiv.textContent = data.error || 'Erreur de connexion';
         }
       } catch (err) {
-        alert('Erreur de connexion');
+        errorDiv.textContent = 'Erreur de connexion';
       }
+    }
+
+    async function getValidToken() {
+      let token = localStorage.getItem('token');
+      
+      // Vérifie si le token est expiré et refresh si nécessaire
+      try {
+        const res = await fetch(API + '/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem('token', data.token);
+          token = data.token;
+        }
+      } catch (err) {
+        logout();
+      }
+      
+      return token;
     }
 
     function logout() {
       localStorage.removeItem('token');
-      localStorage.removeItem('userId');
+      localStorage.removeItem('refreshToken');
+      refreshToken = null;
       showLogin();
       document.getElementById('loginEmail').value = '';
       document.getElementById('loginPassword').value = '';
     }
 
     async function loadRepairs() {
-      const token = localStorage.getItem('token');
+      const token = await getValidToken();
       try {
         const res = await fetch(API + '/repairs', {
           headers: { 'Authorization': 'Bearer ' + token }
@@ -189,7 +225,7 @@
     }
 
     async function loadStats() {
-      const token = localStorage.getItem('token');
+      const token = await getValidToken();
       try {
         const res = await fetch(API + '/stats/summary', {
           headers: { 'Authorization': 'Bearer ' + token }
@@ -203,14 +239,14 @@
     }
 
     async function addRepair() {
-      const token = localStorage.getItem('token');
+      const token = await getValidToken();
       const customer = document.getElementById('customer').value;
       const device = document.getElementById('device').value;
       const issue = document.getElementById('issue').value;
-      const price = parseInt(document.getElementById('price').value);
+      const price = document.getElementById('price').value;
 
       if (!customer || !device || !issue || !price) {
-        alert('Remplis tous les champs!');
+        alert('Rempllis tous les champs!');
         return;
       }
 
@@ -221,7 +257,7 @@
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token
           },
-          body: JSON.stringify({ customer, device, issue, price })
+          body: JSON.stringify({ customer, device, issue, price: parseFloat(price) })
         });
         document.getElementById('customer').value = '';
         document.getElementById('device').value = '';
@@ -232,7 +268,7 @@
     }
 
     async function updateStatus(id, status) {
-      const token = localStorage.getItem('token');
+      const token = await getValidToken();
       try {
         await fetch(API + '/repairs/' + id, {
           method: 'PUT',
@@ -248,7 +284,7 @@
 
     async function deleteRepair(id) {
       if (confirm('Supprimer?')) {
-        const token = localStorage.getItem('token');
+        const token = await getValidToken();
         try {
           await fetch(API + '/repairs/' + id, {
             method: 'DELETE',
