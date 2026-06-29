@@ -2,6 +2,7 @@ const API = 'https://trusted-repaire.onrender.com';
 let isLoginMode = true;
 let refreshToken = null;
 
+// Event listeners (au lieu de onclick inline)
 window.onload = () => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -11,6 +12,19 @@ window.onload = () => {
   } else {
     showLogin();
   }
+  
+  // Setup event listeners
+  const authBtn = document.querySelector('.login-form button');
+  if (authBtn) authBtn.addEventListener('click', handleAuth);
+  
+  const toggleBtn = document.querySelector('.login-form .toggle');
+  if (toggleBtn) toggleBtn.addEventListener('click', toggleAuthMode);
+  
+  const logoutBtn = document.querySelector('.logout-btn');
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+  
+  const addBtn = document.querySelector('.header + .stats + h2 + div button');
+  if (addBtn) addBtn.addEventListener('click', addRepair);
 };
 
 function toggleAuthMode() {
@@ -125,16 +139,29 @@ function displayRepairs(repairs) {
       <td>${r.device}</td>
       <td>${r.issue}</td>
       <td>
-        <select onchange="updateStatus('${r._id}', this.value)">
+        <select data-id="${r._id}" class="status-select">
           <option value="En attente" ${r.status === 'En attente' ? 'selected' : ''}>En attente</option>
           <option value="En réparation" ${r.status === 'En réparation' ? 'selected' : ''}>En réparation</option>
           <option value="Réparation terminée" ${r.status === 'Réparation terminée' ? 'selected' : ''}>Terminée</option>
         </select>
       </td>
       <td>${r.price}€</td>
-      <td><button onclick="deleteRepair('${r._id}')">Supprimer</button></td>
+      <td><button class="delete-btn" data-id="${r._id}">Supprimer</button></td>
     </tr>
   `).join('');
+  
+  // Event listeners pour les selects et boutons de suppression
+  document.querySelectorAll('.status-select').forEach(select => {
+    select.addEventListener('change', (e) => {
+      updateStatus(e.target.dataset.id, e.target.value);
+    });
+  });
+  
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      deleteRepair(e.target.dataset.id);
+    });
+  });
 }
 
 async function loadStats() {
@@ -177,7 +204,9 @@ async function addRepair() {
     document.getElementById('issue').value = '';
     document.getElementById('price').value = '';
     loadRepairs();
-  } catch (err) {}
+  } catch (err) {
+    console.error('Erreur:', err);
+  }
 }
 
 async function updateStatus(id, status) {
@@ -192,7 +221,9 @@ async function updateStatus(id, status) {
       body: JSON.stringify({ status })
     });
     loadRepairs();
-  } catch (err) {}
+  } catch (err) {
+    console.error('Erreur:', err);
+  }
 }
 
 async function deleteRepair(id) {
@@ -204,6 +235,8 @@ async function deleteRepair(id) {
         headers: { 'Authorization': 'Bearer ' + token }
       });
       loadRepairs();
-    } catch (err) {}
+    } catch (err) {
+      console.error('Erreur:', err);
+    }
   }
 }
