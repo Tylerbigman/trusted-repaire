@@ -55,9 +55,6 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-const User = mongoose.model('User', userSchema);
-
-// Schéma Repair
 const repairSchema = new mongoose.Schema({
   userId: mongoose.Schema.Types.ObjectId,
   customer: { type: String, required: true },
@@ -65,6 +62,7 @@ const repairSchema = new mongoose.Schema({
   issue: { type: String, required: true },
   status: { type: String, default: 'En attente' },
   price: { type: Number, required: true, min: 0 },
+  trackingCode: { type: String, unique: true, required: true },
   createdAt: { type: Date, default: Date.now }
 });
 

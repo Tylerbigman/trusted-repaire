@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Tracker ma réparation - Trusted Repaire</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .container { background: white; padding: 40px; border-radius: 10px; max-width: 500px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    h1 { color: #667eea; margin-bottom: 30px; text-align: center; }
+    .search-box { display: flex; gap: 10px; margin-bottom: 30px; }
+    input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; }
+    button { padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #764ba2; }
+    
+    .repair-info { display: none; padding: 20px; background: #f8f9fa; border-radius: 10px; }
+    .repair-info.show { display: block; }
+    
+    .info-row { margin: 15px 0; }
+    .label { color: #666; font-size: 12px; text-transform: uppercase; }
+    .value { font-size: 16px; font-weight: bold; color: #333; }
+    
+    .status { padding: 15px; border-radius: 5px; text-align: center; font-weight: bold; margin: 20px 0; }
+    .status.pending { background: #fff3cd; color: #856404; }
+    .status.progress { background: #d1ecf1; color: #0c5460; }
+    .status.done { background: #d4edda; color: #155724; }
+    
+    .error { color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 5px; display: none; }
+    .error.show { display: block; }
+    
+    .timeline { margin-top: 30px; }
+    .timeline-item { padding: 15px; border-left: 3px solid #ddd; margin-left: 10px; }
+    .timeline-item.active { border-left-color: #667eea; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Suivi de réparation</h1>
+    
+    <div class="search-box">
+      <input type="text" id="codeInput" placeholder="Rentre ton code (ex: TR-ABC123)" maxlength="9">
+      <button onclick="trackRepair()">Rechercher</button>
+    </div>
+    
+    <div class="error" id="errorMsg"></div>
+    
+    <div class="repair-info" id="repairInfo">
+      <h2 style="margin-bottom: 20px; color: #333;">Détails de ta réparation</h2>
+      
+      <div class="info-row">
+        <div class="label">Appareil</div>
+        <div class="value" id="device">-</div>
+      </div>
+      
+      <div class="info-row">
+        <div class="label">Problème</div>
+        <div class="value" id="issue">-</div>
+      </div>
+      
+      <div class="info-row">
+        <div class="label">Prix</div>
+        <div class="value" id="price">-</div>
+      </div>
+      
+      <div class="status" id="statusBadge">
+        Status
+      </div>
+      
+      <div class="timeline">
+        <div class="timeline-item" id="step1">
+          ✓ Réception
+        </div>
+        <div class="timeline-item" id="step2">
+          ⚙️ En réparation
+        </div>
+        <div class="timeline-item" id="step3">
+          ✓ Terminée
+        </div>
+      </div>
+      
+      <p style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+        Dernière mise à jour: <span id="updatedAt">-</span>
+      </p>
+    </div>
+  </div>
+
+  <script src="track.js"></script>
+</body>
+</html>
